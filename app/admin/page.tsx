@@ -271,45 +271,6 @@ export default function AdminDashboard() {
     });
   }
 
-        // 1. Try secure RPC function call for this single family
-        const { error: rpcError } = await supabase.rpc('mark_single_family_paid', {
-          target_family_id: fam.id,
-          new_receipt_no: receipt
-        });
-
-        // 2. Direct Update Fallback
-        if (rpcError) {
-          const unpaidIds = unpaidList.map(item => item.id);
-          const { error: directError } = await supabase
-            .from('fees')
-            .update({
-              status: 'paid',
-              paid_date: paidTime,
-              receipt_no: receipt
-            })
-            .in('id', unpaidIds);
-
-          if (directError) {
-            setMsg('Fee update korte shomoshya hoyeche. SQL permission check korun.');
-            setLoading(false);
-            setConfirmModal(prev => ({ ...prev, isOpen: false }));
-            return;
-          }
-        }
-
-        // Send WhatsApp confirmation
-        const msgText = `আসসালামু আলাইকুম ${fam.head_name} সাহেব। আপনার পরিবারের সম্পূর্ণ বাৎসরিক ইমাম ফি বাবদ মোট ₹${totalDue}/- গৃহীত হয়েছে। অফিসিয়াল রসিদ নং: ${receipt}। জাযাকাল্লাহু খাইরান। - ${mosqueProfile.name || 'রামরামপুর জামে মসজিদ'}`;
-        const url = getWhatsAppUrl(fam.phone, msgText);
-        window.open(url, '_blank');
-
-        setLoading(false);
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        setMsg(`${fam.head_name} shaheb-er batsorik fee porishodh shompurno hoyeche!`);
-        await loadAllData();
-      }
-    });
-  }
-
   // Download Receipt
   function downloadYearlyReceipt(fam: any, famFees: any[]) {
     const paidList = famFees.filter(f => f.status === 'paid');
