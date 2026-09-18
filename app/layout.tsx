@@ -13,7 +13,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="bn">
-      <body className="bg-slate-50 text-slate-900 antialiased">
+      <head>
+        {/* Tailwind CSS CDN script - eta dile mobile build-eo styling 100% guarantee kaj korbe */}
+        <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body className="bg-slate-100 text-slate-900 antialiased selection:bg-emerald-500 selection:text-white">
         {children}
       </body>
     </html>
