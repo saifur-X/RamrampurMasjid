@@ -223,13 +223,53 @@ export default function AdminDashboard() {
 
     setConfirmModal({
       isOpen: true,
-      title: 'Batsorik Fee Grahan Nishchitkoron',
-      description: `${fam.head_name} shaheb mot bokea fee ₹${totalDue}/- joma diyechen? Shudhumatro tar poribar-ke porishodhito korte chan?`,
+      title: 'বাৎসরিক ফি গ্রহণ নিশ্চিতকরণ',
+      description: `${fam.head_name} সাহেবের সম্পূর্ণ বাৎসরিক বকেয়া ফি (₹${totalDue}) পরিশোধিত হিসেবে গ্রহণ ও WhatsApp রসিদ পাঠাতে চান?`,
       action: async () => {
         setLoading(true);
         setMsg('');
         const receipt = `REC-${Date.now().toString().slice(-6)}`;
         const paidTime = new Date().toISOString();
+
+        // ১. সরাসরি RPC ফাংশন কল
+        const { error: rpcErr } = await supabase.rpc('mark_single_family_paid', {
+          target_family_id: fam.id,
+          new_receipt_no: receipt
+        });
+
+        if (rpcErr) {
+          // ২. ফলব্যাক সরাসরি আপডেট
+          const unpaidIds = unpaidList.map(item => item.id);
+          const { error: directErr } = await supabase
+            .from('fees')
+            .update({
+              status: 'paid',
+              paid_date: paidTime,
+              receipt_no: receipt
+            })
+            .in('id', unpaidIds);
+
+          if (directErr) {
+            // আসল ডাটাবেস এরর মেসেজ প্রদর্শন
+            setMsg(`ডাটাবেস এরর: ${directErr.message || rpcErr.message}`);
+            setLoading(false);
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            return;
+          }
+        }
+
+        // WhatsApp মেসেজ পাঠানো
+        const msgText = `আসসালামু আলাইকুম ${fam.head_name} সাহেব। আপনার পরিবারের সম্পূর্ণ বাৎসরিক ইমাম ফি বাবদ মোট ₹${totalDue}/- গৃহীত হয়েছে। অফিসিয়াল রসিদ নং: ${receipt}। জাযাকাল্লাহু খাইরান। - ${mosqueProfile.name || 'রামরামপুর জামে মসজিদ'}`;
+        const url = getWhatsAppUrl(fam.phone, msgText);
+        window.open(url, '_blank');
+
+        setLoading(false);
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setMsg(`${fam.head_name} সাহেবের বাৎসরিক ফি সফলভাবে পরিশোধ হয়েছে!`);
+        await loadAllData();
+      }
+    });
+  }
 
         // 1. Try secure RPC function call for this single family
         const { error: rpcError } = await supabase.rpc('mark_single_family_paid', {
